@@ -40,6 +40,16 @@ The project uses modern web standards (ES modules, CSS custom properties) and is
 
 This approach ensures your code does exactly what's needed, nothing more, with built-in verification at each step.
 
+## Better Comments VS Code Extension
+
+Color-code your comments for better organization:
+
+- **Alert comments** (`! Important note`) - Red highlighting for critical information
+- **Query comments** (`? Why does this work?`) - Blue for questions and unclear code
+- **TODO comments** (`TODO: Fix this later`) - Orange for tasks and reminders
+- **Highlight comments** (`* Key point here`) - Green for important notes
+- **Strikethrough** (`// Old code`) - Gray strikethrough for commented-out code
+
 
 # Code style
 - Use ES modules (import/export) syntax, not CommonJS (require)
