@@ -7,6 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run dev` - Start development server with Vite
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build locally
+- `npm test` - Run Jest tests
+- `npm run test:watch` - Run Jest tests in watch mode
 
 ## Architecture
 
