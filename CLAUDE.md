@@ -100,7 +100,9 @@ Follow CSS Intrinsic Design principles for modern, adaptive layouts:
 **Key Technologies to Use:**
 - **CSS Math Functions**: Use `clamp()`, `min()`, `max()` for fluid sizing constraints
 - **Container Queries**: Make components adapt based on their parent container's size, not just viewport
-- **CSS Grid & Flexbox**: Leverage these layout methods for natural, flexible arrangements
+- **CSS Grid & 
+- 
+- Flexbox**: Leverage these layout methods for natural, flexible arrangements
 - **Modern Units**: Prefer `ch`, `ex`, viewport units, and container-relative units over fixed pixels
 - **`contain-intrinsic-size`**: Use for layout performance optimization
 
