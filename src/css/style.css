@@ -1,0 +1,112 @@
+/*SECTION - Table Of Content
+*	Global Reset
+* Block
+* Composition & Layouts
+* Utilities
+* Exception
+*/
+/*_ GLOBAL RESET: *****************/
+:root {
+	/*_ TYPOGRAPHY: *******************/
+	--OpenSans: 'Open Sans'; /* <weight>: Use a value from 300 to 800 */
+	--E-Garamond: 'EB Garamond'; /* <weight>: Use a value from 400 to 800 */
+	--JetBrains-Mono: 'JetBrains Mono'; /* <weight>: Use a value from 100 to 800 */
+
+	/*^ Font-family: *******************/
+	--sanserif: var(--OpenSans);
+	--serif: var(--E-Garamond);
+	--monospace: var(--JetBrains-Mono);
+
+	/*^ Fonts: *******************/
+	--ff-primary-400: var(--OpenSans, ui-sans-serif, sans-serif);
+	--ff-secondary-400: var(--sanserif, ui-serif, serif);
+	--ff-accent-400: var(--monospace, ui-monospace, monospace);
+
+	/*^ Fonts Size: *******************/
+	--font-size-300: clamp(0.7rem, 0.66rem + 0.2vw, 0.8rem);
+	--font-size-400: clamp(0.88rem, 0.83rem + 0.24vw, 1rem);
+	--font-size-500: clamp(1.09rem, 1rem + 0.47vw, 1.33rem);
+	--font-size-600: clamp(1.37rem, 1.21rem + 0.8vw, 1.78rem);
+	--font-size-700: clamp(1.71rem, 1.45rem + 1.29vw, 2.37rem);
+	--font-size-800: clamp(2.14rem, 1.74rem + 1.99vw, 3.16rem);
+	--font-size-900: clamp(2.67rem, 2.07rem + 3vw, 4.21rem);
+	--font-size-1000: clamp(3.34rem, 2.45rem + 4.43vw, 5.61rem);
+
+	/*^ Fonts Weight: *******************/
+	--font-weight-300: 300;
+	--font-weight-400: 400;
+	--font-weight-500: 500;
+	--font-weight-600: 600;
+	--font-weight-700: 700;
+	--font-weight-800: 800;
+	--font-weight-900: 900;
+
+	/*_ STYLE: ************************/
+	--color-000: oklch(90% none none);
+	--color-900: oklch(20% 0 0);
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	--_font-weight: var(--font-weight-400);
+	--_font-size: var(--font-size-300);
+	--_primary-color: var(--color-900);
+	--_secondary-color: var(--color-000);
+	--_font-family: 'Open Sans', sans-serif;
+}
+
+p {
+	-webkit-text-wrap: pretty;
+	text-wrap: pretty;
+}
+
+/*_ BLOCK: ************************/
+body {
+	font-family: var(--_font-family);
+	font-weight: var(--_font-weight);
+	font-size: var(--_font-size);
+	font-style: normal;
+	font-variation-settings: 'wdth' 100;
+	font-optical-sizing: auto;
+	line-height: 1.7;
+
+	color: var(--_primary-color);
+	background-color: var(--_secondary-color);
+}
+
+/*_ COMPOSITION & LAYOUTS: ********/
+/*_ EXCEPTION: ********************/
+/*_ UTILITIES: ********************/
+.visually-hidden:not(:focus):not(:active) {
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	height: 1px;
+	overflow: hidden;
+	position: absolute;
+	white-space: nowrap;
+	width: 1px;
+}
+
+.debug {
+	background-color: oklch(33.9% 0.179 301.95 / 1%);
+	outline: 1px solid oklch(33.9% 0.179 301.95);
+	& > * {
+		background-color: oklch(65.49% 0.26 357.3 / 2%);
+		outline: 1px solid oklch(65.49% 0.26 357.3);
+		& > * {
+			background-color: oklch(86% 0.29 142.65 / 3%);
+			outline: 1px solid oklch(86% 0.29 142.65);
+		}
+	}
+}
+
+/* 
+	.notes{
+		text-box: trim-both cap alphabetic;
+	}
+*/
