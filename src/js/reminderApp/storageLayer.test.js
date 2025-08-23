@@ -1,25 +1,38 @@
+/**
+ * @jest-environment jsdom
+ */
 import { StorageLayer } from './storageLayer.js';
 import { Reminder } from './index.js';
 import { Temporal } from '@js-temporal/polyfill';
+
+// Mock functions manually
+const createMockFn = (implementation = () => {}) => {
+  const mockFn = (...args) => {
+    mockFn.calls.push(args);
+    return implementation(...args);
+  };
+  mockFn.calls = [];
+  return mockFn;
+};
 
 // Mock localStorage for testing
 const mockLocalStorage = (() => {
   let store = {};
   return {
-    getItem: jest.fn((key) => store[key] || null),
-    setItem: jest.fn((key, value) => {
+    getItem: createMockFn((key) => store[key] || null),
+    setItem: createMockFn((key, value) => {
       store[key] = value.toString();
     }),
-    removeItem: jest.fn((key) => {
+    removeItem: createMockFn((key) => {
       delete store[key];
     }),
-    clear: jest.fn(() => {
+    clear: createMockFn(() => {
       store = {};
     }),
     get length() {
       return Object.keys(store).length;
     },
-    key: jest.fn((index) => {
+    key: createMockFn((index) => {
       const keys = Object.keys(store);
       return keys[index] || null;
     })
@@ -37,7 +50,12 @@ describe('StorageLayer', () => {
 
   beforeEach(() => {
     mockLocalStorage.clear();
-    jest.clearAllMocks();
+    // Clear mock calls
+    Object.values(mockLocalStorage).forEach(fn => {
+      if (fn && fn.calls) {
+        fn.calls = [];
+      }
+    });
     storageLayer = new StorageLayer(storageKey);
   });
 
@@ -56,7 +74,8 @@ describe('StorageLayer', () => {
     test('should initialize with empty data when localStorage is empty', () => {
       const data = storageLayer.load();
       expect(data).toEqual([]);
-      expect(mockLocalStorage.getItem).toHaveBeenCalledWith(storageKey);
+      expect(mockLocalStorage.getItem.calls.length).toBe(1);
+      expect(mockLocalStorage.getItem.calls[0][0]).toBe(storageKey);
     });
   });
 
@@ -68,10 +87,8 @@ describe('StorageLayer', () => {
       storageLayer.save(data);
       const loaded = storageLayer.load();
 
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-        storageKey,
-        expect.any(String)
-      );
+      expect(mockLocalStorage.setItem.calls.length).toBe(1);
+      expect(mockLocalStorage.setItem.calls[0][0]).toBe(storageKey);
       expect(loaded).toHaveLength(1);
       expect(loaded[0]).toBeInstanceOf(Reminder);
       expect(loaded[0].title).toBe('Test Task');

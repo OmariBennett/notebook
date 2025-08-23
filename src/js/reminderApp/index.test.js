@@ -228,27 +228,446 @@ describe('Reminder App Test Suite', () => {
 
   // TODO: Add ReminderManager class tests
   describe('ReminderManager Class', () => {
-    
-    test('should create and manage reminders', () => {
-      // ! Test will be implemented when ReminderManager class is ready
-      expect(true).toBe(true);
+    let manager;
+    let sampleReminders;
+    let futureDate;
+    let pastDate;
+    let mockLocalStorage;
+
+    beforeEach(() => {
+      futureDate = Temporal.PlainDateTime.from('2026-12-25T15:30:00');
+      pastDate = Temporal.PlainDateTime.from('2023-01-15T09:00:00');
+      
+      mockLocalStorage = {
+        data: {},
+        getItem: function(key) { return this.data[key] || null; },
+        setItem: function(key, value) { this.data[key] = value; },
+        removeItem: function(key) { delete this.data[key]; },
+        clear: function() { this.data = {}; }
+      };
+      
+      global.localStorage = mockLocalStorage;
+      
+      manager = new ReminderManager();
+      
+      sampleReminders = [
+        new Reminder('Work meeting', 'Weekly team sync', futureDate, 'high', 'work'),
+        new Reminder('Buy groceries', 'Milk, bread, eggs', pastDate, 'medium', 'personal'),
+        new Reminder('Doctor appointment', 'Annual checkup', futureDate, 'high', 'health'),
+        new Reminder('Call mom', '', null, 'low', 'personal'),
+        new Reminder('Overdue task', 'This task is overdue', pastDate, 'high', 'work')
+      ];
+      
+      sampleReminders[1].markComplete();
+      
+      mockLocalStorage.clear();
     });
 
-    test('should save and load from localStorage', () => {
-      // TODO: Implement storage test
-      expect(true).toBe(true);
+    afterEach(() => {
+      mockLocalStorage.clear();
     });
 
-    test('should filter active reminders', () => {
-      // TODO: Implement active filter test
-      expect(true).toBe(true);
+    describe('Constructor', () => {
+      test('should initialize with empty collection', () => {
+        expect(manager.getAll()).toEqual([]);
+        expect(manager.count()).toBe(0);
+      });
+
+      test('should initialize with storage key', () => {
+        expect(manager.storageKey).toBe('reminders');
+      });
+
+      test('should accept custom storage key', () => {
+        const customManager = new ReminderManager('custom_key');
+        expect(customManager.storageKey).toBe('custom_key');
+      });
+
+      test('should load existing data from localStorage', () => {
+        const testData = [sampleReminders[0].toJSON()];
+        localStorage.setItem('reminders', JSON.stringify(testData));
+        
+        const newManager = new ReminderManager();
+        expect(newManager.count()).toBe(1);
+        expect(newManager.getAll()[0].title).toBe('Work meeting');
+      });
     });
 
-    test('should search reminders by text', () => {
-      // TODO: Implement search test
-      expect(true).toBe(true);
+    describe('Adding Reminders', () => {
+      test('should add single reminder', () => {
+        const reminder = manager.add(sampleReminders[0]);
+        
+        expect(manager.count()).toBe(1);
+        expect(reminder).toBeInstanceOf(Reminder);
+        expect(manager.getAll()).toContain(reminder);
+      });
+
+      test('should add reminder from object data', () => {
+        const reminderData = {
+          title: 'New task',
+          description: 'Test description',
+          dueDate: futureDate,
+          priority: 'medium',
+          category: 'work'
+        };
+
+        const reminder = manager.add(reminderData);
+        
+        expect(reminder).toBeInstanceOf(Reminder);
+        expect(reminder.title).toBe('New task');
+        expect(manager.count()).toBe(1);
+      });
+
+      test('should add multiple reminders', () => {
+        const reminders = manager.addMultiple(sampleReminders);
+        
+        expect(manager.count()).toBe(5);
+        expect(reminders).toHaveLength(5);
+        reminders.forEach(r => expect(r).toBeInstanceOf(Reminder));
+      });
+
+      test('should throw error for invalid reminder', () => {
+        expect(() => manager.add(null)).toThrow('Invalid reminder');
+        expect(() => manager.add({})).toThrow('Invalid reminder');
+        expect(() => manager.add('invalid')).toThrow('Invalid reminder');
+      });
+
+      test('should auto-save after adding', () => {
+        manager.add(sampleReminders[0]);
+        
+        const stored = JSON.parse(localStorage.getItem('reminders'));
+        expect(stored).toHaveLength(1);
+        expect(stored[0].title).toBe('Work meeting');
+      });
     });
 
+    describe('Removing Reminders', () => {
+      beforeEach(() => {
+        manager.addMultiple(sampleReminders);
+      });
+
+      test('should remove reminder by ID', () => {
+        const reminder = manager.getAll()[0];
+        const removed = manager.remove(reminder.id);
+        
+        expect(removed).toEqual(reminder);
+        expect(manager.count()).toBe(4);
+        expect(manager.getById(reminder.id)).toBeNull();
+      });
+
+      test('should return null for non-existent ID', () => {
+        const removed = manager.remove('non-existent');
+        expect(removed).toBeNull();
+        expect(manager.count()).toBe(5);
+      });
+
+      test('should remove completed reminders', () => {
+        const completedCount = manager.getCompleted().length;
+        const removedCount = manager.removeCompleted();
+        
+        expect(removedCount).toBe(completedCount);
+        expect(manager.getCompleted()).toHaveLength(0);
+      });
+
+      test('should clear all reminders', () => {
+        manager.clear();
+        
+        expect(manager.count()).toBe(0);
+        expect(manager.getAll()).toEqual([]);
+      });
+
+      test('should auto-save after removing', () => {
+        const reminder = manager.getAll()[0];
+        manager.remove(reminder.id);
+        
+        const stored = JSON.parse(localStorage.getItem('reminders'));
+        expect(stored).toHaveLength(4);
+      });
+    });
+
+    describe('Updating Reminders', () => {
+      beforeEach(() => {
+        manager.addMultiple(sampleReminders);
+      });
+
+      test('should update existing reminder', () => {
+        const reminder = manager.getAll()[0];
+        const updates = { title: 'Updated title', priority: 'low' };
+        
+        const updated = manager.update(reminder.id, updates);
+        
+        expect(updated.title).toBe('Updated title');
+        expect(updated.priority).toBe('low');
+        expect(updated.id).toBe(reminder.id);
+      });
+
+      test('should return null for non-existent ID', () => {
+        const updated = manager.update('non-existent', { title: 'New title' });
+        expect(updated).toBeNull();
+      });
+
+      test('should validate updates', () => {
+        const reminder = manager.getAll()[0];
+        
+        expect(() => manager.update(reminder.id, { title: '' }))
+          .toThrow('Title is required');
+        expect(() => manager.update(reminder.id, { priority: 'invalid' }))
+          .toThrow('Invalid priority level');
+      });
+
+      test('should auto-save after updating', () => {
+        const reminder = manager.getAll()[0];
+        manager.update(reminder.id, { title: 'Updated' });
+        
+        const stored = JSON.parse(localStorage.getItem('reminders'));
+        const updatedStored = stored.find(r => r.id === reminder.id);
+        expect(updatedStored.title).toBe('Updated');
+      });
+    });
+
+    describe('Retrieval Methods', () => {
+      beforeEach(() => {
+        manager.addMultiple(sampleReminders);
+      });
+
+      test('should get all reminders', () => {
+        const all = manager.getAll();
+        expect(all).toHaveLength(5);
+        all.forEach(r => expect(r).toBeInstanceOf(Reminder));
+      });
+
+      test('should get reminder by ID', () => {
+        const reminder = manager.getAll()[0];
+        const found = manager.getById(reminder.id);
+        
+        expect(found).toEqual(reminder);
+      });
+
+      test('should return null for non-existent ID', () => {
+        const found = manager.getById('non-existent');
+        expect(found).toBeNull();
+      });
+
+      test('should get active reminders', () => {
+        const active = manager.getActive();
+        
+        expect(active).toHaveLength(4);
+        active.forEach(r => expect(r.isCompleted).toBe(false));
+      });
+
+      test('should get completed reminders', () => {
+        const completed = manager.getCompleted();
+        
+        expect(completed).toHaveLength(1);
+        completed.forEach(r => expect(r.isCompleted).toBe(true));
+      });
+
+      test('should get overdue reminders', () => {
+        const overdue = manager.getOverdue();
+        
+        expect(overdue).toHaveLength(1);
+        expect(overdue[0].title).toBe('Overdue task');
+      });
+
+      test('should get upcoming reminders', () => {
+        const upcoming = manager.getUpcoming(1000);
+        
+        expect(upcoming.length).toBe(2);
+        upcoming.forEach(r => {
+          expect(r.dueDate).not.toBeNull();
+          expect(r.isOverdue()).toBe(false);
+        });
+      });
+    });
+
+    describe('Filtering and Search', () => {
+      beforeEach(() => {
+        manager.addMultiple(sampleReminders);
+      });
+
+      test('should get reminders by category', () => {
+        const personal = manager.getByCategory('personal');
+        const work = manager.getByCategory('work');
+        
+        expect(personal).toHaveLength(2);
+        expect(work).toHaveLength(2);
+        personal.forEach(r => expect(r.category).toBe('personal'));
+        work.forEach(r => expect(r.category).toBe('work'));
+      });
+
+      test('should get reminders by priority', () => {
+        const high = manager.getByPriority('high');
+        const medium = manager.getByPriority('medium');
+        const low = manager.getByPriority('low');
+        
+        expect(high).toHaveLength(3);
+        expect(medium).toHaveLength(1);
+        expect(low).toHaveLength(1);
+      });
+
+      test('should search reminders by text', () => {
+        const meetingResults = manager.search('meeting');
+        const groceryResults = manager.search('groceries');
+        const emptyResults = manager.search('nonexistent');
+        
+        expect(meetingResults).toHaveLength(1);
+        expect(meetingResults[0].title).toContain('meeting');
+        expect(groceryResults).toHaveLength(1);
+        expect(emptyResults).toHaveLength(0);
+      });
+
+      test('should search in title and description', () => {
+        const syncResults = manager.search('sync');
+        const milkResults = manager.search('milk');
+        
+        expect(syncResults).toHaveLength(1);
+        expect(milkResults).toHaveLength(1);
+      });
+
+      test('should perform case-insensitive search', () => {
+        const upperResults = manager.search('MEETING');
+        const lowerResults = manager.search('meeting');
+        
+        expect(upperResults).toEqual(lowerResults);
+      });
+    });
+
+    describe('Sorting', () => {
+      beforeEach(() => {
+        manager.addMultiple(sampleReminders);
+      });
+
+      test('should sort by title', () => {
+        const sorted = manager.sortBy('title');
+        const titles = sorted.map(r => r.title);
+        
+        expect(titles).toEqual([...titles].sort());
+      });
+
+      test('should sort by due date', () => {
+        const sorted = manager.sortBy('dueDate');
+        
+        for (let i = 0; i < sorted.length - 1; i++) {
+          if (sorted[i].dueDate && sorted[i + 1].dueDate) {
+            expect(Temporal.PlainDateTime.compare(sorted[i].dueDate, sorted[i + 1].dueDate))
+              .toBeLessThanOrEqual(0);
+          }
+        }
+      });
+
+      test('should sort by priority', () => {
+        const sorted = manager.sortBy('priority');
+        const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+        
+        for (let i = 0; i < sorted.length - 1; i++) {
+          expect(priorityOrder[sorted[i].priority])
+            .toBeGreaterThanOrEqual(priorityOrder[sorted[i + 1].priority]);
+        }
+      });
+
+      test('should sort in descending order', () => {
+        const sorted = manager.sortBy('title', 'desc');
+        const titles = sorted.map(r => r.title);
+        
+        expect(titles).toEqual([...titles].sort().reverse());
+      });
+    });
+
+    describe('Storage Persistence', () => {
+      test('should save to localStorage', () => {
+        manager.addMultiple(sampleReminders);
+        manager.save();
+        
+        const stored = JSON.parse(localStorage.getItem('reminders'));
+        expect(stored).toHaveLength(5);
+      });
+
+      test('should load from localStorage', () => {
+        const testData = sampleReminders.map(r => r.toJSON());
+        localStorage.setItem('reminders', JSON.stringify(testData));
+        
+        manager.load();
+        expect(manager.count()).toBe(5);
+      });
+
+      test('should handle corrupted storage data', () => {
+        localStorage.setItem('reminders', 'invalid json');
+        
+        expect(() => manager.load()).not.toThrow();
+        expect(manager.count()).toBe(0);
+      });
+
+      test('should handle missing storage data', () => {
+        expect(() => manager.load()).not.toThrow();
+        expect(manager.count()).toBe(0);
+      });
+
+      test('should export reminders as JSON', () => {
+        manager.addMultiple(sampleReminders);
+        const exported = manager.export();
+        
+        expect(typeof exported).toBe('string');
+        const parsed = JSON.parse(exported);
+        expect(parsed).toHaveLength(5);
+      });
+
+      test('should import reminders from JSON', () => {
+        const testData = sampleReminders.map(r => r.toJSON());
+        const jsonData = JSON.stringify(testData);
+        
+        const imported = manager.import(jsonData);
+        expect(imported).toBe(5);
+        expect(manager.count()).toBe(5);
+      });
+    });
+
+    describe('Statistics and Utilities', () => {
+      beforeEach(() => {
+        manager.addMultiple(sampleReminders);
+      });
+
+      test('should count all reminders', () => {
+        expect(manager.count()).toBe(5);
+      });
+
+      test('should count active reminders', () => {
+        expect(manager.countActive()).toBe(4);
+      });
+
+      test('should count completed reminders', () => {
+        expect(manager.countCompleted()).toBe(1);
+      });
+
+      test('should count overdue reminders', () => {
+        expect(manager.countOverdue()).toBe(1);
+      });
+
+      test('should count by category', () => {
+        const counts = manager.countByCategory();
+        
+        expect(counts.personal).toBe(2);
+        expect(counts.work).toBe(2);
+        expect(counts.health).toBe(1);
+      });
+
+      test('should count by priority', () => {
+        const counts = manager.countByPriority();
+        
+        expect(counts.high).toBe(3);
+        expect(counts.medium).toBe(1);
+        expect(counts.low).toBe(1);
+      });
+
+      test('should get statistics summary', () => {
+        const stats = manager.getStatistics();
+        
+        expect(stats.total).toBe(5);
+        expect(stats.active).toBe(4);
+        expect(stats.completed).toBe(1);
+        expect(stats.overdue).toBe(1);
+        expect(stats.byCategory).toBeDefined();
+        expect(stats.byPriority).toBeDefined();
+      });
+    });
   });
 
 });
